@@ -2,6 +2,7 @@ package query
 
 import (
 	"errors"
+	"strings"
 )
 
 //
@@ -23,6 +24,10 @@ const (
 	STRING      TokenType = "STRING" // For literal strings
 	IDENTIFIER  TokenType = "IDENTIFIER"
 	NUMBER      TokenType = "NUMBER"
+	UPDATE      TokenType = "UPDATE"
+	EQUALS      TokenType = "EQUALS"
+	WHERE       TokenType = "WHERE"
+	SET         TokenType = "SET"
 )
 
 type Token struct {
@@ -41,6 +46,8 @@ func Parse(tokens []Token) (Statement, error) {
 		return parseSelect(tokens)
 	case INSERT:
 		return parseInsert(tokens)
+	case UPDATE:
+		return parseUpdate(tokens)
 	default:
 		return nil, errors.New("unsupported query type")
 	}
@@ -124,5 +131,76 @@ func parseInsert(tokens []Token) (*InsertStatement, error) {
 		Table:   table,
 		Columns: columns,
 		Values:  values,
+	}, nil
+}
+
+func parseUpdate(tokens []Token) (*UpdateStatement, error) {
+	if len(tokens) < 4 {
+		return nil, errors.New("invalid query: insufficient tokens for UPDATE")
+	}
+
+	if tokens[0].Type != UPDATE {
+		//fmt.Println("DEBUG: parseUpdate: tokens[0] is not UPDATE")
+		return nil, errors.New("invalid UPDATE query format")
+	}
+
+	table := tokens[1].Literal
+	// fmt.Println("DEBUG: parseUpdate: Found table:", table)
+
+	if tokens[2].Type != SET {
+		//	fmt.Print("DEBUG: expected SET after table name in UPDATE")
+		return nil, errors.New("expected SET after table name in UPDATE")
+	}
+
+	assignments := make(map[string]string)
+	i := 3
+
+	// Parse assignments (SET clause)
+	for i < len(tokens) && tokens[i].Type != WHERE {
+		if tokens[i].Type == IDENTIFIER {
+			column := tokens[i].Literal
+			i++
+			if i >= len(tokens) || tokens[i].Type != EQUALS {
+				//	fmt.Println("DEBUG: parseUpdate: expected '=' after column name in SET clause")
+				return nil, errors.New("expected '=' after column name in SET clause")
+			}
+			i++
+			if i >= len(tokens) || (tokens[i].Type != STRING && tokens[i].Type != NUMBER) {
+				//	fmt.Printf("DEBUG: tokens[%d]: %+v\n", i, tokens[i])
+				//	fmt.Println("DEBUG:expected '=' after column name in SET clause II")
+				return nil, errors.New("expected value after '=' in SET clause")
+			}
+			value := tokens[i].Literal
+			assignments[column] = value
+			i++
+
+			if i < len(tokens) && tokens[i].Type == COMMA {
+				i++ // Skip comma
+			}
+		} else {
+			//	fmt.Println("DEBUG: parseUpdate: invalid token in SET clause")
+			return nil, errors.New("invalid token in SET clause")
+		}
+	}
+
+	// Parse WHERE clause (optional)
+	var conditions string
+	if i < len(tokens) && tokens[i].Type == WHERE {
+		i++
+		var whereParts []string
+		for i < len(tokens) {
+			whereParts = append(whereParts, tokens[i].Literal)
+			i++
+		}
+		conditions = strings.Join(whereParts, " ")
+	}
+
+	// Debug output to check the flow
+	// fmt.Printf("Parsed UPDATE: table=%s, assignments=%v, conditions=%s\n", table, assignments, conditions)
+
+	return &UpdateStatement{
+		Table:       table,
+		Assignments: assignments,
+		Conditions:  conditions,
 	}, nil
 }

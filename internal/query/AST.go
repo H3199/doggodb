@@ -40,3 +40,27 @@ func (i *InsertStatement) String() string {
 	values := strings.Join(i.Values, ", ")
 	return "INSERT INTO " + i.Table + " (" + columns + ") VALUES (" + values + ")"
 }
+
+type UpdateStatement struct {
+	Table       string            // The table to update
+	Assignments map[string]string // Column-value pairs to update
+	Conditions  string            // WHERE clause (string for now, could be more structured later)
+}
+
+func (i *UpdateStatement) statementNode() {} // I have no idea why this is needed.
+
+// Implement the `string` method for UpdateStatement
+func (u *UpdateStatement) String() string {
+	assignments := []string{}
+	for col, val := range u.Assignments {
+		assignments = append(assignments, col+"="+val)
+	}
+	assignmentStr := strings.Join(assignments, ", ")
+
+	whereClause := ""
+	if u.Conditions != "" {
+		whereClause = " WHERE " + u.Conditions
+	}
+
+	return "UPDATE " + u.Table + " SET " + assignmentStr + whereClause
+}

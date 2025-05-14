@@ -9,8 +9,8 @@ import (
 // Tokenize splits a query into tokens.
 func Tokenize(query string) ([]Token, error) {
 	var tokens []Token
-	valuesMode := false // Track whether we are inside the VALUES clause
-	var current string  // Accumulator for building tokens
+	//valuesMode := false // Track whether we are inside the VALUES clause
+	var current string // Accumulator for building tokens
 
 	flushCurrent := func() {
 		if current == "" {
@@ -24,23 +24,38 @@ func Tokenize(query string) ([]Token, error) {
 			tokens = append(tokens, Token{Type: INSERT, Literal: current})
 		case upperCurrent == "INTO":
 			tokens = append(tokens, Token{Type: INTO, Literal: current})
-		case upperCurrent == "*":
-			tokens = append(tokens, Token{Type: ASTERISK, Literal: current})
 		case upperCurrent == "VALUES":
 			tokens = append(tokens, Token{Type: VALUES, Literal: current})
-			valuesMode = true // Enter VALUES mode
+			//valuesMode = true // Enter VALUES mode
 		case upperCurrent == "FROM":
 			tokens = append(tokens, Token{Type: FROM, Literal: current})
+		case upperCurrent == "UPDATE":
+			tokens = append(tokens, Token{Type: UPDATE, Literal: current})
+		case upperCurrent == "SET":
+			tokens = append(tokens, Token{Type: SET, Literal: current})
+		case upperCurrent == "WHERE":
+			tokens = append(tokens, Token{Type: WHERE, Literal: current})
+		case upperCurrent == "=":
+			tokens = append(tokens, Token{Type: EQUALS, Literal: current})
+		case upperCurrent == "*":
+			tokens = append(tokens, Token{Type: ASTERISK, Literal: current})
 		default:
-			if valuesMode {
-				// Handle literals within VALUES
-				if _, err := strconv.Atoi(current); err == nil {
-					tokens = append(tokens, Token{Type: NUMBER, Literal: current})
-				} else if strings.HasPrefix(current, "'") && strings.HasSuffix(current, "'") {
-					tokens = append(tokens, Token{Type: STRING, Literal: current})
-				} else {
-					tokens = append(tokens, Token{Type: IDENTIFIER, Literal: current})
+			/*
+				if valuesMode {
+					// Handle literals within VALUES
+					if _, err := strconv.Atoi(current); err == nil {
+						tokens = append(tokens, Token{Type: NUMBER, Literal: current})
+					} else if strings.HasPrefix(current, "'") && strings.HasSuffix(current, "'") {
+						tokens = append(tokens, Token{Type: STRING, Literal: current})
+					} else {
+						tokens = append(tokens, Token{Type: IDENTIFIER, Literal: current})
+					}
 				}
+			*/
+			if _, err := strconv.Atoi(current); err == nil {
+				tokens = append(tokens, Token{Type: NUMBER, Literal: current})
+			} else if strings.HasPrefix(current, "'") && strings.HasSuffix(current, "'") {
+				tokens = append(tokens, Token{Type: STRING, Literal: current})
 			} else {
 				// Default case for identifiers
 				tokens = append(tokens, Token{Type: IDENTIFIER, Literal: current})
@@ -62,6 +77,9 @@ func Tokenize(query string) ([]Token, error) {
 		case ',':
 			flushCurrent()
 			tokens = append(tokens, Token{Type: COMMA, Literal: string(char)})
+		case '=':
+			flushCurrent()
+			tokens = append(tokens, Token{Type: EQUALS, Literal: string(char)})
 		case '\'':
 			// Handle quoted strings
 			if strings.HasPrefix(current, "'") {
@@ -84,18 +102,3 @@ func Tokenize(query string) ([]Token, error) {
 
 	return tokens, nil
 }
-
-/*
-func defaultSelectTokenizer(parts []string) ([]Token, error) {
-	if len(parts) != 4 {
-		return nil, errors.New("invalid SELECT query format")
-	}
-
-	return []Token{
-		{Type: SELECT, Literal: parts[0]},
-		{Type: ASTERISK, Literal: parts[1]},
-		{Type: FROM, Literal: parts[2]},
-		{Type: IDENTIFIER, Literal: parts[3]},
-	}, nil
-}
-*/

@@ -84,3 +84,35 @@ func TestInsert(t *testing.T) {
 		t.Errorf("AST does not match. Expected %v, got %v", expectedAST, ast)
 	}
 }
+
+func TestUpdateParsing(t *testing.T) {
+	queryString := "UPDATE users SET name = 'Alice', age = 25 WHERE id = 1"
+	tokens, err := query.Tokenize(queryString)
+	if err != nil {
+		t.Fatalf("Tokenization failed: %v", err)
+	}
+
+	stmt, err := query.Parse(tokens)
+	updateStmt, ok := stmt.(*query.UpdateStatement)
+	if !ok {
+		t.Fatalf("Expected UpdateStatement, got %T", stmt)
+	}
+
+	if updateStmt.Table != "users" {
+		t.Errorf("Expected table 'users', got %s", updateStmt.Table)
+	}
+	if err != nil {
+		t.Fatalf("Parsing failed: %v", err)
+	}
+
+	expectedAssignments := map[string]string{"name": "'Alice'", "age": "25"}
+	for col, val := range expectedAssignments {
+		if updateStmt.Assignments[col] != val {
+			t.Errorf("Expected %s = %s, got %s", col, val, updateStmt.Assignments[col])
+		}
+	}
+
+	if updateStmt.Conditions != "id = 1" {
+		t.Errorf("Expected condition 'id = 1', got %s", updateStmt.Conditions)
+	}
+}
