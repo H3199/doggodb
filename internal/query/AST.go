@@ -1,5 +1,7 @@
 package query
 
+import "strings"
+
 // Node is the interface that all AST nodes implement.
 type Node interface {
 	String() string
@@ -21,4 +23,20 @@ func (s *SelectStatement) statementNode() {}
 // String returns a string representation of the SelectStatement.
 func (s *SelectStatement) String() string {
 	return "SELECT * FROM " + s.Table
+}
+
+// InsertStatement represents an INSERT query in the AST.
+type InsertStatement struct {
+	Table   string   // The name of the table being inserted into.
+	Columns []string // The list of column names.
+	Values  []string // The corresponding list of values.
+}
+
+func (i *InsertStatement) statementNode() {}
+
+// String returns a string representation of the InsertStatement.
+func (i *InsertStatement) String() string {
+	columns := strings.Join(i.Columns, ", ")
+	values := strings.Join(i.Values, ", ")
+	return "INSERT INTO " + i.Table + " (" + columns + ") VALUES (" + values + ")"
 }
