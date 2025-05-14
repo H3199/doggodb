@@ -15,7 +15,9 @@ type Statement interface {
 
 // SelectStatement represents a SELECT query in the AST.
 type SelectStatement struct {
-	Table string // The name of the table being queried.
+	Table      string
+	Columns    []string
+	Conditions string // Optional WHERE clause
 }
 
 func (s *SelectStatement) statementNode() {}

@@ -58,12 +58,61 @@ func parseSelect(tokens []Token) (*SelectStatement, error) {
 		return nil, errors.New("invalid query: insufficient tokens")
 	}
 
-	if tokens[0].Type != SELECT || tokens[1].Type != ASTERISK || tokens[2].Type != FROM || tokens[3].Type != IDENTIFIER {
-		return nil, errors.New("invalid SELECT query format")
+	// Ensure the query starts with SELECT
+	if tokens[0].Type != SELECT {
+		return nil, errors.New("invalid SELECT query format: missing SELECT")
+	}
+
+	var columns []string
+	i := 1
+
+	// Parse columns
+	if tokens[i].Type == ASTERISK {
+		columns = append(columns, "*")
+		i++
+	} else {
+		for i < len(tokens) && tokens[i].Type != FROM {
+			if tokens[i].Type == IDENTIFIER {
+				columns = append(columns, tokens[i].Literal)
+			} else if tokens[i].Type != COMMA {
+				return nil, errors.New("unexpected token in column list")
+			}
+			i++
+		}
+		if len(columns) == 0 {
+			return nil, errors.New("no columns specified in SELECT")
+		}
+	}
+
+	// Ensure FROM keyword
+	if i >= len(tokens) || tokens[i].Type != FROM {
+		return nil, errors.New("expected FROM after column list")
+	}
+	i++ // Skip 'FROM'
+
+	// Parse table name
+	if i >= len(tokens) || tokens[i].Type != IDENTIFIER {
+		return nil, errors.New("expected table name after FROM")
+	}
+	table := tokens[i].Literal
+	i++ // Skip table name
+
+	// Parse optional WHERE clause
+	var conditions string
+	if i < len(tokens) && tokens[i].Type == WHERE {
+		i++ // Skip 'WHERE'
+		var whereParts []string
+		for i < len(tokens) {
+			whereParts = append(whereParts, tokens[i].Literal)
+			i++
+		}
+		conditions = strings.Join(whereParts, " ")
 	}
 
 	return &SelectStatement{
-		Table: tokens[3].Literal,
+		Table:      table,
+		Columns:    columns,
+		Conditions: conditions,
 	}, nil
 }
 

@@ -20,7 +20,8 @@ func TestSimpleSelect(t *testing.T) {
 
 	// Expected AST
 	expectedAST := &query.SelectStatement{
-		Table: "users",
+		Table:   "users",
+		Columns: []string{"*"}, // Include the columns for completeness
 	}
 
 	// Test the tokenizer
@@ -33,12 +34,54 @@ func TestSimpleSelect(t *testing.T) {
 	}
 
 	// Test the parser
-	ast, err := query.Parse(tokens)
+	stmt, err := query.Parse(tokens)
 	if err != nil {
 		t.Fatalf("Parser failed: %v", err)
 	}
-	if !reflect.DeepEqual(ast, expectedAST) {
-		t.Errorf("Unexpected AST:\nExpected: %v\nGot: %v", expectedAST, ast)
+
+	// Ensure stmt is of type *query.SelectStatement
+	ast, ok := stmt.(*query.SelectStatement)
+	if !ok {
+		t.Fatalf("Expected *query.SelectStatement, got %T", stmt)
+	}
+
+	// Compare the AST fields
+	if expectedAST.Table != ast.Table {
+		t.Errorf("Table mismatch: expected %s, got %s", expectedAST.Table, ast.Table)
+	}
+	if !reflect.DeepEqual(expectedAST.Columns, ast.Columns) {
+		t.Errorf("Columns mismatch: expected %v, got %v", expectedAST.Columns, ast.Columns)
+	}
+}
+
+func TestAdvancedSelect(t *testing.T) {
+	queryString := "SELECT name, age FROM users WHERE id = 1"
+	tokens, err := query.Tokenize(queryString)
+	if err != nil {
+		t.Fatalf("Tokenization failed: %v", err)
+	}
+
+	stmt, err := query.Parse(tokens)
+	if err != nil {
+		t.Fatalf("Parsing failed: %v", err)
+	}
+
+	selectStmt, ok := stmt.(*query.SelectStatement)
+	if !ok {
+		t.Fatalf("Expected SelectStatement, got %T", stmt)
+	}
+
+	expectedColumns := []string{"name", "age"}
+	if !reflect.DeepEqual(selectStmt.Columns, expectedColumns) {
+		t.Errorf("Expected columns %v, got %v", expectedColumns, selectStmt.Columns)
+	}
+
+	if selectStmt.Table != "users" {
+		t.Errorf("Expected table 'users', got %s", selectStmt.Table)
+	}
+
+	if selectStmt.Conditions != "id = 1" {
+		t.Errorf("Expected condition 'id = 1', got %s", selectStmt.Conditions)
 	}
 }
 
