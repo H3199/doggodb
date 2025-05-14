@@ -3,26 +3,33 @@ package data
 import (
 	"fmt"
 )
-// A row is a slice of values
+
+// Row represents a row in a table, holding values for each column.
 type Row struct {
-    Values []interface{}
+	Columns map[string]interface{} // Mapping of column names to values
 }
 
-func CreateRow(values []interface{}) Row {
-    return Row{Values: values}
+// CreateRow creates a new Row with the specified column values.
+func CreateRow(columns map[string]interface{}) *Row {
+	return &Row{
+		Columns: columns,
+	}
 }
 
-func (r *Row) GetValue(index int) (interface{}, error) {
-    if index < 0 || index >= len(r.Values) {
-        return nil, fmt.Errorf("index out of bounds")
-    }
-    return r.Values[index], nil
+// GetValue retrieves a column value by its name.
+func (r *Row) GetValue(columnName string) (interface{}, error) {
+	value, exists := r.Columns[columnName]
+	if !exists {
+		return nil, fmt.Errorf("column '%s' not found", columnName)
+	}
+	return value, nil
 }
 
-func (r *Row) SetValue(index int, value interface{}) error {
-    if index < 0 || index >= len(r.Values) {
-        return fmt.Errorf("index out of bounds")
-    }
-    r.Values[index] = value
-    return nil
+// SetValue sets a column value by its name.
+func (r *Row) SetValue(columnName string, value interface{}) error {
+	if _, exists := r.Columns[columnName]; !exists {
+		return fmt.Errorf("column '%s' not found", columnName)
+	}
+	r.Columns[columnName] = value
+	return nil
 }
