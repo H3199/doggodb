@@ -63,3 +63,82 @@ func TestExecutorInsert(t *testing.T) {
 		}
 	}
 }
+
+func TestExecutorSelect(t *testing.T) {
+	// Step 1: Create an in-memory storage instance.
+	storage := data.NewInMemoryStorage()
+
+	// Step 2: Create a new executor with the storage.
+	executor := query.NewExecutor(*storage)
+
+	// Step 3: Create a new table in the storage.
+	tableName := "users"
+	_, err := storage.CreateTable(tableName)
+	if err != nil {
+		t.Fatalf("Failed to create table: %v", err)
+	}
+
+	// Step 4: Insert some rows into the table.
+	insertStmt1 := &query.InsertStatement{
+		Table:   tableName,
+		Columns: []string{"id", "name", "email"},
+		Values:  []string{"1", "Alice", "alice@example.com"},
+	}
+	_, err = executor.Execute(insertStmt1)
+	if err != nil {
+		t.Fatalf("Failed to insert row: %v", err)
+	}
+
+	insertStmt2 := &query.InsertStatement{
+		Table:   tableName,
+		Columns: []string{"id", "name", "email"},
+		Values:  []string{"2", "Bob", "bob@example.com"},
+	}
+	_, err = executor.Execute(insertStmt2)
+	if err != nil {
+		t.Fatalf("Failed to insert row: %v", err)
+	}
+
+	// Step 5: Define the SELECT statement.
+	selectStmt := &query.SelectStatement{
+		Table:      tableName,
+		Columns:    []string{"id", "name", "email"}, // Selecting all columns
+		Conditions: "id = 1",                        // Filter: WHERE id = 1
+	}
+
+	// Step 6: Execute the SELECT statement.
+	result, err := executor.Execute(selectStmt)
+	if err != nil {
+		t.Fatalf("ExecuteSelect failed: %v", err)
+	}
+
+	// Step 7: Verify the result.
+	rows, ok := result.([]*data.Row)
+	//fmt.Print("Here are the rows:")
+	//fmt.Print(rows)
+	if !ok {
+		t.Fatalf("Expected result to be []*data.Row, got %T", result)
+	}
+
+	if len(rows) != 1 {
+		t.Fatalf("Expected 1 row, got %d", len(rows))
+	}
+
+	row := rows[0]
+	expectedValues := map[string]interface{}{
+		"id":    "1",
+		"name":  "Alice",
+		"email": "alice@example.com",
+	}
+
+	for column, expected := range expectedValues {
+		actual, err := row.GetValue(column)
+		if err != nil {
+			t.Errorf("Column '%s' not found in row: %v", column, err)
+			continue
+		}
+		if actual != expected {
+			t.Errorf("Column '%s' mismatch: expected %v, got %v", column, expected, actual)
+		}
+	}
+}

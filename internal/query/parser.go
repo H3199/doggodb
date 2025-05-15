@@ -2,7 +2,11 @@ package query
 
 import (
 	"errors"
+	"fmt"
+	"strconv"
 	"strings"
+
+	"github.com/H3199/doggodb/internal/data"
 )
 
 //
@@ -21,7 +25,7 @@ const (
 	COMMA       TokenType = "COMMA"
 	LEFT_PAREN  TokenType = "LEFT_PAREN"
 	RIGHT_PAREN TokenType = "RIGHT_PAREN"
-	STRING      TokenType = "STRING" // For literal strings
+	STRING      TokenType = "STRING"
 	IDENTIFIER  TokenType = "IDENTIFIER"
 	NUMBER      TokenType = "NUMBER"
 	UPDATE      TokenType = "UPDATE"
@@ -252,4 +256,55 @@ func parseUpdate(tokens []Token) (*UpdateStatement, error) {
 		Assignments: assignments,
 		Conditions:  conditions,
 	}, nil
+}
+
+func parseCondition(condition string) (func(*data.Row) bool, error) {
+	// Example: "age > 30"
+	// Note: This is a basic implementation. For complex conditions, a full parser is needed.
+	parts := strings.Split(condition, " ")
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("invalid condition format")
+	}
+
+	column, operator, value := parts[0], parts[1], parts[2]
+
+	// Convert the value from the condition to a float if needed
+	valNum, _ := toFloat(value)
+
+	return func(row *data.Row) bool {
+		colValue, exists := row.Columns[column]
+		if !exists {
+			return false
+		}
+
+		switch operator {
+		case "=":
+			// Handle equality
+			return fmt.Sprintf("%v", colValue) == value
+
+		case ">", "<":
+			// Ensure colValue is numeric
+			colNum, err := toFloat(fmt.Sprintf("%v", colValue))
+			if err != nil {
+				return false
+			}
+
+			// Perform the comparison
+			if operator == ">" {
+				return colNum > valNum
+			} else if operator == "<" {
+				return colNum < valNum
+			}
+
+		default:
+			// Unsupported operator
+			return false
+		}
+
+		return false
+	}, nil
+}
+
+func toFloat(value string) (float64, error) {
+	return strconv.ParseFloat(value, 64)
 }

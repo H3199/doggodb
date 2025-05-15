@@ -21,6 +21,8 @@ func (e *Executor) Execute(stmt Statement) (interface{}, error) {
 	switch s := stmt.(type) {
 	case *InsertStatement:
 		return e.executeInsert(s)
+	case *SelectStatement:
+		return e.executeSelect(s)
 	default:
 		return nil, fmt.Errorf("unsupported statement type")
 	}
@@ -44,4 +46,48 @@ func (e *Executor) executeInsert(stmt *InsertStatement) (interface{}, error) {
 
 	// Return success with no result.
 	return nil, nil
+}
+
+func (e *Executor) executeSelect(stmt *SelectStatement) (interface{}, error) {
+	// Retrieve the table.
+	table, err := e.storage.GetTable(stmt.Table)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute SELECT: %v", err)
+	}
+
+	// Parse the condition into a function.
+	var conditionFunc func(*data.Row) bool
+	if stmt.Conditions != "" {
+		conditionFunc, err = parseCondition(stmt.Conditions)
+		if err != nil {
+			return nil, fmt.Errorf("invalid condition: %v", err)
+		}
+	}
+
+	// Query the table with the condition.
+	filteredRows := table.Query(func(row *data.Row) bool {
+		if conditionFunc == nil {
+			return true // No condition means include all rows.
+		}
+		return conditionFunc(row)
+	})
+
+	// Prepare the result set.
+	var result []*data.Row
+	for _, row := range filteredRows {
+		if len(stmt.Columns) == 0 { // SELECT * case.
+			result = append(result, row)
+		} else { // Filter specific columns.
+			columns := make(map[string]interface{})
+			for _, col := range stmt.Columns {
+				if value, exists := row.Columns[col]; exists {
+					columns[col] = value
+				} else {
+					columns[col] = nil
+				}
+			}
+			result = append(result, data.CreateRow(columns))
+		}
+	}
+	return result, nil
 }
