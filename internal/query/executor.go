@@ -23,6 +23,8 @@ func (e *Executor) Execute(stmt Statement) (interface{}, error) {
 		return e.executeInsert(s)
 	case *SelectStatement:
 		return e.executeSelect(s)
+	case *UpdateStatement:
+		return e.executeUpdate(s)
 	default:
 		return nil, fmt.Errorf("unsupported statement type")
 	}
@@ -92,4 +94,38 @@ func (e *Executor) executeSelect(stmt *SelectStatement) (interface{}, error) {
 	}
 
 	return result, nil
+}
+
+func (e *Executor) executeUpdate(stmt *UpdateStatement) (interface{}, error) {
+	// Retrieve the table
+	table, err := e.storage.GetTable(stmt.Table)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute UPDATE: %v", err)
+	}
+
+	// Parse the condition into a function
+	var conditionFunc func(*data.Row) bool
+	if stmt.Conditions != "" {
+		conditionFunc, err = parseCondition(stmt.Conditions)
+		if err != nil {
+			return nil, fmt.Errorf("invalid condition: %v", err)
+		}
+	}
+
+	// Track rows updated
+	rowsUpdated := 0
+
+	// Iterate over the rows and apply the update
+	for _, row := range table.Rows {
+		if conditionFunc == nil || conditionFunc(row) {
+			for col, newValue := range stmt.Assignments {
+				if err := row.SetValue(col, newValue); err != nil {
+					return nil, fmt.Errorf("failed to set value for column '%s': %v", col, err)
+				}
+			}
+			rowsUpdated++
+		}
+	}
+
+	return rowsUpdated, nil // Return the count of rows updated
 }

@@ -198,3 +198,146 @@ func TestExecutorSelect(t *testing.T) {
 		}
 	}
 }
+
+func TestExecutorUpdate(t *testing.T) {
+	fmt.Println("Step 1: Creating an in-memory storage instance...")
+	storage := data.NewInMemoryStorage()
+
+	fmt.Println("Step 2: Creating an executor...")
+	executor := query.NewExecutor(*storage)
+
+	fmt.Println("Step 3: Creating a new table in the storage...")
+	tableName := "users"
+	_, err := storage.CreateTable(tableName)
+	if err != nil {
+		t.Fatalf("Failed to create table: %v", err)
+	}
+	fmt.Println("Table created successfully.")
+
+	fmt.Println("Step 4: Inserting rows into the table...")
+	insertStmt1 := &query.InsertStatement{
+		Table:   tableName,
+		Columns: []string{"id", "name", "email"},
+		Values:  []string{"1", "Alice", "alice@example.com"},
+	}
+	_, err = executor.Execute(insertStmt1)
+	if err != nil {
+		t.Fatalf("Failed to insert row: %v", err)
+	}
+	fmt.Println("Inserted first row.")
+
+	insertStmt2 := &query.InsertStatement{
+		Table:   tableName,
+		Columns: []string{"id", "name", "email"},
+		Values:  []string{"2", "Bob", "bob@example.com"},
+	}
+	_, err = executor.Execute(insertStmt2)
+	if err != nil {
+		t.Fatalf("Failed to insert row: %v", err)
+	}
+	fmt.Println("Inserted second row.")
+
+	fmt.Println("Step 5: Defining the UPDATE statement...")
+	updateStmt := &query.UpdateStatement{
+		Table: tableName,
+		Assignments: map[string]string{
+			"name":  "Updated Alice",
+			"email": "updated_alice@example.com",
+		},
+		Conditions: "id = 1",
+	}
+	fmt.Println("UPDATE statement defined:", updateStmt)
+
+	fmt.Println("Step 6: Executing the UPDATE statement...")
+	result, err := executor.Execute(updateStmt)
+	if err != nil {
+		t.Fatalf("ExecuteUpdate failed: %v", err)
+	}
+
+	rowsUpdated, ok := result.(int)
+	if !ok {
+		t.Fatalf("Expected result to be int, got %T", result)
+	}
+
+	fmt.Printf("Rows updated: %d\n", rowsUpdated)
+	if rowsUpdated != 1 {
+		t.Fatalf("Expected 1 row to be updated, got %d", rowsUpdated)
+	}
+
+	fmt.Println("Step 7: Verifying the updated row...")
+	table, err := storage.GetTable(tableName)
+	if err != nil {
+		t.Fatalf("Failed to retrieve table: %v", err)
+	}
+
+	var updatedRow *data.Row
+	for _, row := range table.Rows {
+		id, err := row.GetValue("id")
+		if err == nil && id == "1" {
+			updatedRow = row
+			break
+		}
+	}
+
+	if updatedRow == nil {
+		t.Fatalf("Updated row not found")
+	}
+	fmt.Println("Updated row found:", updatedRow)
+
+	expectedValues := map[string]interface{}{
+		"id":    "1",
+		"name":  "Updated Alice",
+		"email": "updated_alice@example.com",
+	}
+
+	fmt.Println("Verifying updated row values...")
+	for column, expected := range expectedValues {
+		actual, err := updatedRow.GetValue(column)
+		if err != nil {
+			t.Errorf("Column '%s' not found in row: %v", column, err)
+			continue
+		}
+		if actual != expected {
+			t.Errorf("Column '%s' mismatch: expected %v, got %v", column, expected, actual)
+		} else {
+			fmt.Printf("Column '%s' value verified: %v\n", column, actual)
+		}
+	}
+
+	fmt.Println("Step 8: Verifying the other row remains unchanged...")
+	var otherRow *data.Row
+	for _, row := range table.Rows {
+		id, err := row.GetValue("id")
+		if err == nil && id == "2" {
+			otherRow = row
+			break
+		}
+	}
+
+	if otherRow == nil {
+		t.Fatalf("Other row not found")
+	}
+	fmt.Println("Other row found:", otherRow)
+
+	expectedOtherValues := map[string]interface{}{
+		"id":    "2",
+		"name":  "Bob",
+		"email": "bob@example.com",
+	}
+
+	fmt.Println("Verifying other row values...")
+	for column, expected := range expectedOtherValues {
+		actual, err := otherRow.GetValue(column)
+		if err != nil {
+			t.Errorf("Column '%s' not found in row: %v", column, err)
+			continue
+		}
+		if actual != expected {
+			t.Errorf("Column '%s' mismatch: expected %v, got %v", column, expected, actual)
+		} else {
+			fmt.Printf("Column '%s' value verified: %v\n", column, actual)
+		}
+	}
+
+	fmt.Println("TestExecutorUpdate completed successfully.")
+}
