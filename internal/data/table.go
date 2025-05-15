@@ -70,3 +70,14 @@ func (t *Table) Update(assignments map[string]interface{}, condition func(*Row) 
 	}
 	return nil
 }
+
+func (t *Table) DeleteRow(rowToDelete *Row) error {
+	for i, row := range t.Rows {
+		if row == rowToDelete {
+			// Remove the row from the slice
+			t.Rows = append(t.Rows[:i], t.Rows[i+1:]...)
+			return nil
+		}
+	}
+	return errors.New("row not found")
+}

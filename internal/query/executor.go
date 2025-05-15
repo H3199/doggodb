@@ -25,6 +25,8 @@ func (e *Executor) Execute(stmt Statement) (interface{}, error) {
 		return e.executeSelect(s)
 	case *UpdateStatement:
 		return e.executeUpdate(s)
+	case *DeleteStatement:
+		return e.executeDelete(s)
 	default:
 		return nil, fmt.Errorf("unsupported statement type")
 	}
@@ -128,4 +130,41 @@ func (e *Executor) executeUpdate(stmt *UpdateStatement) (interface{}, error) {
 	}
 
 	return rowsUpdated, nil // Return the count of rows updated
+}
+
+func (e *Executor) executeDelete(stmt *DeleteStatement) (interface{}, error) {
+	// Retrieve the table.
+	table, err := e.storage.GetTable(stmt.Table)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute DELETE: %v", err)
+	}
+
+	// Parse the condition into a function.
+	var conditionFunc func(*data.Row) bool
+	if stmt.Conditions != "" {
+		conditionFunc, err = parseCondition(stmt.Conditions)
+		if err != nil {
+			return nil, fmt.Errorf("invalid condition: %v", err)
+		}
+	}
+
+	// Find rows to delete using table.Query and the condition function.
+	rowsToDelete := table.Query(func(row *data.Row) bool {
+		if conditionFunc == nil {
+			return true // No condition means delete all rows.
+		}
+		return conditionFunc(row)
+	})
+
+	// Delete the filtered rows from the table.
+	rowsDeleted := 0
+	for _, delRow := range rowsToDelete {
+		err := table.DeleteRow(delRow)
+		if err != nil {
+			return nil, fmt.Errorf("failed to delete row: %v", err)
+		}
+		rowsDeleted++
+	}
+
+	return rowsDeleted, nil
 }

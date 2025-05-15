@@ -66,3 +66,21 @@ func (u *UpdateStatement) String() string {
 
 	return "UPDATE " + u.Table + " SET " + assignmentStr + whereClause
 }
+
+// DeleteStatement represents a DELETE SQL statement.
+type DeleteStatement struct {
+	Table      string // The table to delete rows from
+	Conditions string // Optional WHERE clause
+}
+
+// statementNode is a marker method for DeleteStatement (required for implementing the Statement interface).
+func (d *DeleteStatement) statementNode() {}
+
+// String returns a string representation of the DeleteStatement.
+func (d *DeleteStatement) String() string {
+	whereClause := ""
+	if d.Conditions != "" {
+		whereClause = " WHERE " + d.Conditions
+	}
+	return "DELETE FROM " + d.Table + whereClause
+}

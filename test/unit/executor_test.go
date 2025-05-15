@@ -341,3 +341,75 @@ func TestExecutorUpdate(t *testing.T) {
 
 	fmt.Println("TestExecutorUpdate completed successfully.")
 }
+
+func TestExecutorDelete(t *testing.T) {
+	fmt.Println("Starting TestExecutorDelete")
+
+	// Step 1: Create in-memory storage and executor
+	storage := data.NewInMemoryStorage()
+	executor := query.NewExecutor(*storage)
+
+	// Step 2: Create table
+	tableName := "users"
+	fmt.Println("Creating table:", tableName)
+	_, err := storage.CreateTable(tableName)
+	if err != nil {
+		t.Fatalf("Failed to create table: %v", err)
+	}
+
+	// Step 3: Insert rows
+	fmt.Println("Inserting rows")
+	rowsToInsert := []map[string]string{
+		{"id": "1", "name": "Alice", "email": "alice@example.com"},
+		{"id": "2", "name": "Bob", "email": "bob@example.com"},
+	}
+	for _, rowData := range rowsToInsert {
+		insertStmt := &query.InsertStatement{
+			Table:   tableName,
+			Columns: []string{"id", "name", "email"},
+			Values:  []string{rowData["id"], rowData["name"], rowData["email"]},
+		}
+		_, err := executor.Execute(insertStmt)
+		if err != nil {
+			t.Fatalf("Failed to insert row: %v", err)
+		}
+	}
+	fmt.Println("Rows inserted successfully")
+
+	// Step 4: Define DELETE statement with condition to delete Bob (id=2)
+	fmt.Println("Preparing DELETE statement: DELETE FROM users WHERE id = 2")
+	deleteStmt := &query.DeleteStatement{
+		Table:      tableName,
+		Conditions: "id = 2",
+	}
+
+	// Step 5: Execute DELETE
+	fmt.Println("Executing DELETE statement...")
+	result, err := executor.Execute(deleteStmt)
+	if err != nil {
+		t.Fatalf("ExecuteDelete failed: %v", err)
+	}
+	fmt.Println("Delete result:", result)
+
+	// Step 6: Verify that Bob's row is deleted, only Alice remains
+	table, err := storage.GetTable(tableName)
+	if err != nil {
+		t.Fatalf("Failed to get table: %v", err)
+	}
+
+	fmt.Printf("Table now has %d rows\n", len(table.Rows))
+	if len(table.Rows) != 1 {
+		t.Fatalf("Expected 1 row after delete, got %d", len(table.Rows))
+	}
+
+	remainingRow := table.Rows[0]
+	name, err := remainingRow.GetValue("name")
+	if err != nil {
+		t.Fatalf("Failed to get 'name' from remaining row: %v", err)
+	}
+	if name != "Alice" {
+		t.Errorf("Expected remaining row to be 'Alice', got %v", name)
+	}
+
+	fmt.Println("TestExecutorDelete completed successfully")
+}
