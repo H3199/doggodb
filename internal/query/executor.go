@@ -72,22 +72,24 @@ func (e *Executor) executeSelect(stmt *SelectStatement) (interface{}, error) {
 		return conditionFunc(row)
 	})
 
-	// Prepare the result set.
+	// If selecting all columns (SELECT *), return the filtered rows directly:
+	if len(stmt.Columns) == 1 && stmt.Columns[0] == "*" {
+		return filteredRows, nil
+	}
+
+	// Otherwise, create new rows with only selected columns:
 	var result []*data.Row
 	for _, row := range filteredRows {
-		if len(stmt.Columns) == 0 { // SELECT * case.
-			result = append(result, row)
-		} else { // Filter specific columns.
-			columns := make(map[string]interface{})
-			for _, col := range stmt.Columns {
-				if value, exists := row.Columns[col]; exists {
-					columns[col] = value
-				} else {
-					columns[col] = nil
-				}
+		columns := make(map[string]interface{})
+		for _, col := range stmt.Columns {
+			if val, ok := row.Columns[col]; ok {
+				columns[col] = val
+			} else {
+				columns[col] = nil
 			}
-			result = append(result, data.CreateRow(columns))
 		}
+		result = append(result, data.CreateRow(columns))
 	}
+
 	return result, nil
 }

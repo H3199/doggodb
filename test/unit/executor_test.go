@@ -3,6 +3,8 @@ package test
 import (
 	"testing"
 
+	"fmt"
+
 	"github.com/H3199/doggodb/internal/data"
 	"github.com/H3199/doggodb/internal/query"
 )
@@ -72,13 +74,16 @@ func TestExecutorSelect(t *testing.T) {
 	executor := query.NewExecutor(*storage)
 
 	// Step 3: Create a new table in the storage.
+	fmt.Println("Creating table...")
 	tableName := "users"
 	_, err := storage.CreateTable(tableName)
 	if err != nil {
 		t.Fatalf("Failed to create table: %v", err)
 	}
+	fmt.Println("Table created.")
 
 	// Step 4: Insert some rows into the table.
+	fmt.Println("Inserting rows...")
 	insertStmt1 := &query.InsertStatement{
 		Table:   tableName,
 		Columns: []string{"id", "name", "email"},
@@ -99,6 +104,7 @@ func TestExecutorSelect(t *testing.T) {
 		t.Fatalf("Failed to insert row: %v", err)
 	}
 
+	fmt.Println("Rows inserted.")
 	// Step 5: Define the SELECT statement.
 	selectStmt := &query.SelectStatement{
 		Table:      tableName,
@@ -107,12 +113,14 @@ func TestExecutorSelect(t *testing.T) {
 	}
 
 	// Step 6: Execute the SELECT statement.
+	fmt.Println("Executing SELECT statement...")
 	result, err := executor.Execute(selectStmt)
 	if err != nil {
 		t.Fatalf("ExecuteSelect failed: %v", err)
 	}
 
 	// Step 7: Verify the result.
+	fmt.Println("Verifying result...")
 	rows, ok := result.([]*data.Row)
 	//fmt.Print("Here are the rows:")
 	//fmt.Print(rows)
@@ -139,6 +147,54 @@ func TestExecutorSelect(t *testing.T) {
 		}
 		if actual != expected {
 			t.Errorf("Column '%s' mismatch: expected %v, got %v", column, expected, actual)
+		}
+	}
+
+	// SELECT * test
+	fmt.Println("SELECT * test")
+	selectAllStmt := &query.SelectStatement{
+		Table:      tableName,
+		Columns:    []string{"*"},
+		Conditions: "", // No WHERE clause
+	}
+
+	resultAll, err := executor.Execute(selectAllStmt)
+	if err != nil {
+		t.Fatalf("ExecuteSelect * failed: %v", err)
+	}
+
+	rowsAll, ok := resultAll.([]*data.Row)
+
+	//	fmt.Println("Here are the rows:")
+	//	fmt.Println(rowsAll)
+	//	for i, r := range rowsAll {
+	//		fmt.Printf("Row %d columns: %+v\n", i, r.Columns)
+	//	}
+
+	if !ok {
+		t.Fatalf("Expected result to be []*data.Row, got %T", resultAll)
+	}
+
+	if len(rowsAll) != 2 {
+		t.Fatalf("Expected 2 rows, got %d", len(rowsAll))
+	}
+
+	expectedRows := []map[string]interface{}{
+		{"id": "1", "name": "Alice", "email": "alice@example.com"},
+		{"id": "2", "name": "Bob", "email": "bob@example.com"},
+	}
+
+	for i, expected := range expectedRows {
+		row := rowsAll[i]
+		for column, expVal := range expected {
+			actual, err := row.GetValue(column)
+			if err != nil {
+				t.Errorf("Row %d: column '%s' not found: %v", i, column, err)
+				continue
+			}
+			if actual != expVal {
+				t.Errorf("Row %d: column '%s' mismatch: expected %v, got %v", i, column, expVal, actual)
+			}
 		}
 	}
 }
