@@ -84,3 +84,13 @@ func (d *DeleteStatement) String() string {
 	}
 	return "DELETE FROM " + d.Table + whereClause
 }
+
+type CreateTableStatement struct {
+	Table string
+}
+
+func (c *CreateTableStatement) statementNode() {}
+
+func (c *CreateTableStatement) String() string {
+	return "CREATE TABLE " + c.Table
+}

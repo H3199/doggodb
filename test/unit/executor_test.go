@@ -17,6 +17,7 @@ func TestExecutorInsert(t *testing.T) {
 	executor := query.NewExecutor(*storage)
 
 	// Step 3: Create a new table in the storage.
+	fmt.Print("Create a new table in the storage directly with storage layer.\n")
 	tableName := "users"
 	_, err := storage.CreateTable(tableName)
 	if err != nil {
@@ -412,4 +413,21 @@ func TestExecutorDelete(t *testing.T) {
 	}
 
 	fmt.Println("TestExecutorDelete completed successfully")
+}
+
+func TestExecutorCreateTable(t *testing.T) {
+	storage := data.NewInMemoryStorage()
+	executor := query.NewExecutor(*storage)
+
+	stmt := &query.CreateTableStatement{Table: "test_table"}
+
+	_, err := executor.Execute(stmt)
+	if err != nil {
+		t.Fatalf("CreateTableStatement execution failed: %v", err)
+	}
+
+	_, err = storage.GetTable("test_table")
+	if err != nil {
+		t.Fatalf("Table was not created in storage: %v", err)
+	}
 }

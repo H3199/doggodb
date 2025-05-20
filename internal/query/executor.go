@@ -19,6 +19,8 @@ func NewExecutor(storage data.InMemoryStorage) *Executor {
 // Execute executes the given statement.
 func (e *Executor) Execute(stmt Statement) (interface{}, error) {
 	switch s := stmt.(type) {
+	case *CreateTableStatement:
+		return e.executeCreateTable(s)
 	case *InsertStatement:
 		return e.executeInsert(s)
 	case *SelectStatement:
@@ -167,4 +169,12 @@ func (e *Executor) executeDelete(stmt *DeleteStatement) (interface{}, error) {
 	}
 
 	return rowsDeleted, nil
+}
+
+func (e *Executor) executeCreateTable(stmt *CreateTableStatement) (interface{}, error) {
+	_, err := e.storage.CreateTable(stmt.Table)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create table: %v", err)
+	}
+	return nil, nil
 }
