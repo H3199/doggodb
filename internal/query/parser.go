@@ -246,6 +246,7 @@ func parseUpdate(tokens []Token) (*UpdateStatement, error) {
 			i++
 		}
 		conditions = strings.Join(whereParts, " ")
+		fmt.Printf("DEBUG: Parsed WHERE clause: %s\n", conditions)
 	}
 
 	// Debug output to check the flow

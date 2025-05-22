@@ -2,6 +2,7 @@ package server_test
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"testing"
 
@@ -72,7 +73,7 @@ func TestGRPCFullFlow(t *testing.T) {
 	t.Log("Selecting all columns from 'users'")
 	selectResp, err := client.Select(ctx, &db.SelectRequest{
 		TableName:  "users",
-		Columns:    []string{"*"}, // empty slice = SELECT *
+		Columns:    []string{"*"},
 		Conditions: "",
 	})
 	require.NoError(t, err)
@@ -85,8 +86,10 @@ func TestGRPCFullFlow(t *testing.T) {
 	updateResp, err := client.Update(ctx, &db.UpdateRequest{
 		TableName:   "users",
 		Assignments: map[string]string{"email": "alice@newdomain.com"},
-		Conditions:  "id = '1'",
+		Conditions:  "id = 1",
 	})
+	fmt.Println("Number of rows updated: (expecting 1)")
+	fmt.Print(updateResp.RowsUpdated)
 	require.NoError(t, err)
 	require.EqualValues(t, 1, updateResp.RowsUpdated)
 
@@ -95,7 +98,7 @@ func TestGRPCFullFlow(t *testing.T) {
 	selectResp2, err := client.Select(ctx, &db.SelectRequest{
 		TableName:  "users",
 		Columns:    []string{"id", "name", "email"},
-		Conditions: "id = '1'",
+		Conditions: "id = 1",
 	})
 	require.NoError(t, err)
 	require.Len(t, selectResp2.Rows, 1)
@@ -105,7 +108,7 @@ func TestGRPCFullFlow(t *testing.T) {
 	t.Log("Deleting user row")
 	deleteResp, err := client.Delete(ctx, &db.DeleteRequest{
 		TableName:  "users",
-		Conditions: "id = '1'",
+		Conditions: "id = 1",
 	})
 	require.NoError(t, err)
 	require.EqualValues(t, 1, deleteResp.RowsDeleted)
