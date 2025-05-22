@@ -123,3 +123,30 @@ func TestGRPCFullFlow(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, selectResp3.Rows, 0)
 }
+
+func TestGRPCUpdateWithoutConditions(t *testing.T) {
+	client, cleanup := startTestGRPCServer(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	// Create table
+	_, err := client.CreateTable(ctx, &db.CreateTableRequest{TableName: "users"})
+	require.NoError(t, err)
+
+	// Insert a row
+	_, err = client.Insert(ctx, &db.InsertRequest{
+		TableName: "users",
+		Values:    map[string]string{"id": "1", "name": "Alice"},
+	})
+	require.NoError(t, err)
+
+	// Try to update without conditions
+	_, err = client.Update(ctx, &db.UpdateRequest{
+		TableName:   "users",
+		Assignments: map[string]string{"name": "Bob"},
+		Conditions:  "", // No WHERE clause
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "must have a WHERE clause")
+}

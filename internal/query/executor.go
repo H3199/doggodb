@@ -107,6 +107,11 @@ func (e *Executor) executeUpdate(stmt *UpdateStatement) (interface{}, error) {
 		return nil, fmt.Errorf("failed to execute UPDATE: %v", err)
 	}
 
+	// Prevent empty WHERE clause from nuking the entire table.
+	if stmt.Conditions == "" {
+		return nil, fmt.Errorf("UPDATE query must have a WHERE clause to prevent unintentional updates")
+	}
+
 	// Parse the condition into a function
 	var conditionFunc func(*data.Row) bool
 	if stmt.Conditions != "" {
