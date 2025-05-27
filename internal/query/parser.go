@@ -32,6 +32,8 @@ const (
 	EQUALS      TokenType = "EQUALS"
 	WHERE       TokenType = "WHERE"
 	SET         TokenType = "SET"
+	CREATE      TokenType = "CREATE"
+	TABLE       TokenType = "TABLE"
 )
 
 type Token struct {
@@ -52,6 +54,8 @@ func Parse(tokens []Token) (Statement, error) {
 		return parseInsert(tokens)
 	case UPDATE:
 		return parseUpdate(tokens)
+	case CREATE:
+		return parseCreate(tokens)
 	default:
 		return nil, errors.New("unsupported query type")
 	}
@@ -304,6 +308,26 @@ func parseCondition(condition string) (func(*data.Row) bool, error) {
 
 		return false
 	}, nil
+}
+
+func parseCreate(tokens []Token) (*CreateTableStatement, error) {
+	if len(tokens) < 3 {
+		return nil, errors.New("invalid create query")
+	}
+
+	query := &CreateTableStatement{}
+
+	if tokens[0].Type != CREATE {
+		return nil, errors.New("invalid CREATE query")
+	}
+
+	if tokens[1].Type != TABLE {
+		return nil, errors.New("invalid CREATE query")
+	}
+
+	query.Table = tokens[2].Literal
+
+	return query, nil
 }
 
 func toFloat(value string) (float64, error) {
