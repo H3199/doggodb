@@ -153,11 +153,6 @@ grpcurl -plaintext -d '{"table_name": "users", "assignments": {"name": "Alice Up
 
 ```
 
-- **Example**:
-```bash
-grpcurl -plaintext -d '{"table_name": "users", "columns": ["name"], "conditions": "id = 1"}' localhost:50051 doggodb.DatabaseService.Select
-```
-
 #### 5. **Delete**:
 - **Request**:
 ```json
