@@ -41,7 +41,9 @@ Planned features include:
 - **Enhanced SQL Syntax**: Support for more complex queries like joins, aggregations, and indexing.
 - **Persistent Storage**: Extend the database to save data to disk for long-term storage.
 - **Fancy features**: We could experiment with e.g. Bloom filters.
-- **Clustering**: How hard could this be when we have a functioning JSON gRPC API? 
+- **Clustering**: How hard could this be when we have a functioning JSON gRPC API?
+- **Dockerfile**
+- **Kubernetes operator**: This should be interesting
 
 Doggodb aims to grow feature by feature, enhancing both functionality and understanding of database internals.
 
