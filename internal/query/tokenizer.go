@@ -39,19 +39,11 @@ func Tokenize(query string) ([]Token, error) {
 			tokens = append(tokens, Token{Type: EQUALS, Literal: current})
 		case upperCurrent == "*":
 			tokens = append(tokens, Token{Type: ASTERISK, Literal: current})
+		case upperCurrent == "CREATE":
+			tokens = append(tokens, Token{Type: CREATE, Literal: current})
+		case upperCurrent == "TABLE":
+			tokens = append(tokens, Token{Type: TABLE, Literal: current})
 		default:
-			/*
-				if valuesMode {
-					// Handle literals within VALUES
-					if _, err := strconv.Atoi(current); err == nil {
-						tokens = append(tokens, Token{Type: NUMBER, Literal: current})
-					} else if strings.HasPrefix(current, "'") && strings.HasSuffix(current, "'") {
-						tokens = append(tokens, Token{Type: STRING, Literal: current})
-					} else {
-						tokens = append(tokens, Token{Type: IDENTIFIER, Literal: current})
-					}
-				}
-			*/
 			if _, err := strconv.Atoi(current); err == nil {
 				tokens = append(tokens, Token{Type: NUMBER, Literal: current})
 			} else if strings.HasPrefix(current, "'") && strings.HasSuffix(current, "'") {
