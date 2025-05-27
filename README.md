@@ -1,5 +1,5 @@
 # doggodb
-"A Go-based relational DB so simple, even a dog could've developed it!
+A Go-based relational DB so simple, even a dog could've developed it!
 
 ![Alt text](doggo.png)
 
@@ -126,6 +126,10 @@ grpcurl -plaintext -d '{"table_name": "users", "values": {"id": "1", "name": "Al
   ]
 }
 ```
+- **Example**:
+```bash
+grpcurl -plaintext -d '{"table_name": "users", "columns": ["name"], "conditions": "id = 1"}' localhost:50051 doggodb.DatabaseService.Select
+```
 
 #### 4. **Update**:
 - **Request**:
@@ -151,11 +155,6 @@ grpcurl -plaintext -d '{"table_name": "users", "values": {"id": "1", "name": "Al
 ```bash
 grpcurl -plaintext -d '{"table_name": "users", "assignments": {"name": "Alice Updated"}, "conditions": "id = 1"}' localhost:50051 doggodb.DatabaseService.Update
 
-```
-
-- **Example**:
-```bash
-grpcurl -plaintext -d '{"table_name": "users", "columns": ["name"], "conditions": "id = 1"}' localhost:50051 doggodb.DatabaseService.Select
 ```
 
 #### 5. **Delete**:
