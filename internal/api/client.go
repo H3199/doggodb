@@ -63,6 +63,29 @@ func (c *Client) Select(tableName string, columns []string, conditions string) (
 	return resp.Rows, nil
 }
 
+func (c *Client) Update(tableName string, values map[string]string, conditions string) (rowsUpdated int32, err error) {
+	resp, err := c.client.Update(context.Background(), &db.UpdateRequest{
+		TableName:   tableName,
+		Assignments: values,
+		Conditions:  conditions,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to update data: %w", err)
+	}
+	return resp.RowsUpdated, nil
+}
+
+func (c *Client) Delete(tableName string, conditions string) (rowsDeleted int32, err error) {
+	resp, err := c.client.Delete(context.Background(), &db.DeleteRequest{
+		TableName:  tableName,
+		Conditions: conditions,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to delete data: %w", err)
+	}
+	return resp.RowsDeleted, nil
+}
+
 func (c *Client) Close() {
 	c.conn.Close()
 }

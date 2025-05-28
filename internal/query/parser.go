@@ -18,6 +18,7 @@ type TokenType string
 const (
 	INSERT      TokenType = "INSERT"
 	SELECT      TokenType = "SELECT"
+	DELETE      TokenType = "DELETE"
 	ASTERISK    TokenType = "ASTERISK"
 	FROM        TokenType = "FROM"
 	INTO        TokenType = "INTO"
@@ -34,6 +35,7 @@ const (
 	SET         TokenType = "SET"
 	CREATE      TokenType = "CREATE"
 	TABLE       TokenType = "TABLE"
+	SEMICOLON   TokenType = "SEMICOLON"
 )
 
 type Token struct {
@@ -56,6 +58,8 @@ func Parse(tokens []Token) (Statement, error) {
 		return parseUpdate(tokens)
 	case CREATE:
 		return parseCreate(tokens)
+	case DELETE:
+		return parseDelete(tokens)
 	default:
 		return nil, errors.New("unsupported query type")
 	}
@@ -328,6 +332,38 @@ func parseCreate(tokens []Token) (*CreateTableStatement, error) {
 	query.Table = tokens[2].Literal
 
 	return query, nil
+}
+
+func parseDelete(tokens []Token) (*DeleteStatement, error) {
+	if len(tokens) < 3 {
+		return nil, errors.New("invalid query: insufficient tokens for DELETE")
+	}
+
+	if tokens[0].Type != DELETE {
+		return nil, errors.New("invalid DELETE query format")
+	}
+
+	if tokens[1].Type != FROM {
+		return nil, errors.New("expected 'FROM' after 'DELETE'")
+	}
+
+	// Extract the table name
+	table := tokens[2].Literal
+	var conditions string
+
+	// Parse WHERE clause (optional)
+	if len(tokens) > 3 && tokens[3].Type == WHERE {
+		var whereParts []string
+		for i := 4; i < len(tokens); i++ {
+			whereParts = append(whereParts, tokens[i].Literal)
+		}
+		conditions = strings.Join(whereParts, " ")
+	}
+
+	return &DeleteStatement{
+		Table:      table,
+		Conditions: conditions,
+	}, nil
 }
 
 func toFloat(value string) (float64, error) {

@@ -22,6 +22,8 @@ func Tokenize(query string) ([]Token, error) {
 			tokens = append(tokens, Token{Type: SELECT, Literal: current})
 		case upperCurrent == "INSERT":
 			tokens = append(tokens, Token{Type: INSERT, Literal: current})
+		case upperCurrent == "DELETE":
+			tokens = append(tokens, Token{Type: DELETE, Literal: current})
 		case upperCurrent == "INTO":
 			tokens = append(tokens, Token{Type: INTO, Literal: current})
 		case upperCurrent == "VALUES":
@@ -48,6 +50,9 @@ func Tokenize(query string) ([]Token, error) {
 				tokens = append(tokens, Token{Type: NUMBER, Literal: current})
 			} else if strings.HasPrefix(current, "'") && strings.HasSuffix(current, "'") {
 				tokens = append(tokens, Token{Type: STRING, Literal: current})
+				// Let's handle the case of SEMICOLON as the suffix of a string
+			} else if strings.HasSuffix(current, ";") {
+				tokens = append(tokens, Token{Type: IDENTIFIER, Literal: current[:len(current)-1]})
 			} else {
 				// Default case for identifiers
 				tokens = append(tokens, Token{Type: IDENTIFIER, Literal: current})

@@ -67,7 +67,7 @@ func (s *Server) CreateTable(ctx context.Context, req *db.CreateTableRequest) (*
 	}
 	return &db.CreateTableResponse{
 		Success: true,
-		Message: "Table created successfully",
+		Message: "Table " + req.GetTableName() + " created successfully",
 	}, nil
 }
 
