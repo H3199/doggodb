@@ -42,6 +42,7 @@ Planned features include:
 - **Persistent Storage**: Extend the database to save data to disk for long-term storage.
 - **Fancy features**: We could experiment with e.g. Bloom filters.
 - **Clustering**: How hard could this be when we have a functioning JSON gRPC API?
+- **Types**: Support for typed values
 - **Dockerfile**
 - **Kubernetes operator**: This should be interesting
 
@@ -182,7 +183,97 @@ grpcurl -plaintext -d '{"table_name": "users", "conditions": "id = 1"}' localhos
 ```
 
 ## Design
-Documentation under construction.
+## Storage Driver Architecture
+
+### Overview
+The doggodb storage driver is designed around two core concepts:
+
+1. **B-Tree Structured Storage Using the Filesystem**  
+2. **Write-Ahead Logging (WAL) for Durability and Recovery**
+
+These components work together to provide efficient, durable, and crash-resilient storage for the database.
+NOTE & TODO: none of this have been implemented yet. This is just the architechture design.
+
+---
+
+### 1. Filesystem-Based B-Tree Storage
+
+#### Concept
+- The storage driver uses the **native filesystem directory and file hierarchy** to represent the structure of a B-tree index for each table.
+- Each **node in the B-tree** is represented by a directory (internal node) or a file (leaf node).
+- **Keys** are stored as files containing serialized row data (`JSON` format).
+- **Child nodes** are subdirectories representing branches of the B-tree.
+
+#### Example Structure for a Table `users`
+```
+users/               # Root directory for the 'users' table
+├── key_2.json       # Leaf node file with key=2 row data
+├── child_1/         # Subdirectory representing a B-tree child node
+│   ├── key_1.json
+│   └── key_3.json
+└── child_2/
+    ├── key_4.json
+    └── key_5.json
+```
+
+#### Benefits
+- Navigable by shell and other tools, enabling manual inspection and lightweight scripting.
+- Avoids reinventing low-level file management.
+- Intuitive mapping between logical B-tree nodes and physical filesystem entities.
+
+---
+
+### 2. Write-Ahead Log (WAL)
+
+#### Concept
+- The WAL is an **append-only log** file that records every change operation (inserts, updates, deletes) before applying it to the B-tree filesystem.
+- Acts as a durable, sequential record of all intended changes.
+
+#### Functionality
+- **Before applying changes** to the filesystem B-tree, the operation is logged to the WAL.
+- WAL entries are structured as JSON-encoded instructions, e.g.:
+```json
+{"type": "INSERT", "key": 6, "row": {"ID": 6, "Name": "Fiona", "Age": 23}}
+```
+- In case of crashes or failures, the WAL can be **replayed** to restore consistency by reapplying all logged operations.
+
+#### Checkpointing
+- Periodically, changes from WAL are **flushed** to the filesystem B-tree (actual files and directories).
+- After successful flush, the WAL file is truncated or rotated to avoid unbounded growth.
+
+---
+
+### 3. Decoupling of In-Memory and On-Disk Storage
+
+#### In-Memory Storage
+- Serves as the **fast, transient data structure** for query processing and data manipulation.
+- All SQL commands operate first on this structure for responsiveness.
+
+#### On-Disk Storage
+- Represented by the **filesystem-based B-tree** directories and files.
+- Holds the durable, persistent state of the database.
+
+#### Synchronization Workflow
+1. **SQL Command Execution**:
+   - Modify the in-memory structure.
+   - Append the operation to the WAL for durability.
+
+2. **Checkpointing**:
+   - Periodically write in-memory changes to the filesystem B-tree.
+   - Truncate or clear the WAL once changes are safely persisted.
+
+3. **Crash Recovery**:
+   - On startup, replay the WAL to apply any unpersisted operations to the filesystem structure.
+   - This restores on-disk state to the last consistent point.
+
+---
+
+### 4. Future Considerations
+
+- **Concurrency and Locking**: Mechanisms to handle concurrent access and updates safely.
+- **Node Rebalancing**: Implementing B-tree balancing in the filesystem hierarchy.
+- **Compaction**: Cleaning up stale files and optimizing storage usage.
+- **Performance**: Caching strategies and WAL optimization for faster commits.
 
 ## Testing
 
